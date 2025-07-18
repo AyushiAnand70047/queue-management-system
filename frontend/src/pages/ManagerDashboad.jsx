@@ -19,18 +19,36 @@ function ManagerDashboard() {
   const url = import.meta.env.VITE_BACKEND_URL;
 
   useEffect(() => {
-    const fetchManager = async () => {
+    const fetchManagerAndQueues = async () => {
       try {
         const response = await axios.get(`${url}/manager/${managerId}`);
         setManagerName(response.data.name);
         localStorage.setItem('managerName', response.data.name);
+
+        const queuesResponse = await axios.get(`${url}/manager/queues/${managerId}`);
+        const queuesData = queuesResponse.data;
+
+        const formattedQueues = {};
+        queuesData.forEach(q => {
+          formattedQueues[q._id] = {
+            id: q._id,
+            name: q.name,
+            tokens: [],
+            createdAt: new Date(q.createdAt),
+            totalServed: q.totalServed,
+          };
+        });
+
+        setQueues(formattedQueues);
+        setAnalytics(prev => ({ ...prev, totalQueues: queuesData.length }));
       } catch (error) {
-        console.error('Error fetching manager details:', error);
+        console.error('Error fetching manager or queues:', error);
       }
     };
 
-    if (managerId) fetchManager();
+    if (managerId) fetchManagerAndQueues();
   }, [managerId, url]);
+
 
   const handleLogout = () => {
     localStorage.clear();

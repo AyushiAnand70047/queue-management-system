@@ -87,10 +87,21 @@ const addPersonToQueue = async (req, res) => {
   }
 };
 
+const getQueuesByManager = async (req, res) => {
+  const { managerId } = req.params;
+  try {
+    const queues = await Queue.find({ manager: managerId });
+    res.status(200).json(queues);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch queues', error });
+  }
+};
+
 export {
   registerManager,
   loginManager,
   getManagerById,
   createQueue,
   addPersonToQueue,
+  getQueuesByManager
 };
