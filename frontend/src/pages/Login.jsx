@@ -15,47 +15,46 @@ function Login() {
     try {
       const response = await axios.post(`${url}/manager/login`, {
         email,
-        password
+        password,
       });
-      console.log(response.data);
       localStorage.setItem('managerId', response.data.managerId);
-      alert("Login Successful!");
+      alert('Login Successful!');
       navigate('/manager/dashboard');
     } catch (error) {
-      const message = error?.response?.data?.message || "Login failed";
+      const message = error?.response?.data?.message || 'Login failed';
       alert(message);
     }
   };
 
   return (
-    <div className="container-fluid d-flex justify-content-center align-items-center min-vh-100" style={{ backgroundColor: '#000' }}>
+    <div className="container-fluid d-flex justify-content-center align-items-center min-vh-100" style={{ backgroundColor: '#fff' }}>
       <div
-        className="card text-white p-4 shadow"
+        className="card p-4 shadow"
         style={{
-          maxWidth: '400px',
+          maxWidth: '420px',
           width: '100%',
           borderRadius: '1rem',
-          backgroundColor: '#0d1117',
+          backgroundColor: '#f6f9fd',
         }}
       >
         {/* Title */}
         <div className="text-center mb-4">
           <h3 className="fw-bold">Welcome Back</h3>
-          <p className="text-light small">Please sign in to continue</p>
+          <p className="text-dark small">Please sign in to continue</p>
         </div>
 
         {/* Toggle Tabs */}
         <div className="btn-group w-100 mb-4" role="group">
           <button
             type="button"
-            className={`btn ${activeTab === 'manager' ? 'btn-light' : 'btn-outline-light'}`}
+            className={`btn ${activeTab === 'manager' ? 'btn-primary' : 'btn-outline-primary'}`}
             onClick={() => setActiveTab('manager')}
           >
             Manager
           </button>
           <button
             type="button"
-            className={`btn ${activeTab === 'user' ? 'btn-light' : 'btn-outline-light'}`}
+            className={`btn ${activeTab === 'user' ? 'btn-primary' : 'btn-outline-primary'}`}
             onClick={() => setActiveTab('user')}
           >
             User
@@ -70,9 +69,10 @@ function Login() {
                 <label className="form-label">Email Address</label>
                 <input
                   type="email"
-                  className="form-control bg-dark border-secondary text-white"
+                  className="form-control bg-white border-secondary text-dark"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  required
                 />
               </div>
 
@@ -80,21 +80,20 @@ function Login() {
                 <label className="form-label">Password</label>
                 <input
                   type="password"
-                  className="form-control bg-dark border-secondary text-white"
+                  className="form-control bg-white border-secondary text-dark"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  required
                 />
               </div>
 
               <div className="d-grid mb-3">
                 <button
                   type="submit"
-                  className="btn btn-secondary"
-                  style={{
-                    transition: 'all 0.3s ease',
-                  }}
-                  onMouseOver={(e) => e.target.style.backgroundColor = '#5c636a'}
-                  onMouseOut={(e) => e.target.style.backgroundColor = ''}
+                  className="btn btn-primary fw-semibold"
+                  style={{ transition: 'all 0.3s ease' }}
+                  onMouseOver={(e) => (e.target.style.backgroundColor = '#1f65abff')}
+                  onMouseOut={(e) => (e.target.style.backgroundColor = '')}
                 >
                   Sign in
                 </button>
@@ -103,9 +102,20 @@ function Login() {
               <hr className="border-secondary my-3" />
 
               <div className="d-grid">
-                <span className="text-light mb-2">New user? </span>
-                <button type="button" className="btn btn-outline-light" onClick={() => navigate('/register')}>
-                  <i className="bi bi-google me-2"></i> Register
+                <span className="text-dark mb-2 text-center">New user?</span>
+                <button
+                  type="button"
+                  className="btn"
+                  style={{
+                    backgroundColor: '#987048ff',
+                    color: 'white',
+                    fontWeight: '500',
+                    transition: 'all 0.3s ease' }}
+                  onMouseOver={(e) => (e.target.style.backgroundColor = '#7b5631ff')}
+                  onMouseOut={(e) => (e.target.style.backgroundColor = '#b18252ff')}
+                  onClick={() => navigate('/register')}
+                >
+                  Register
                 </button>
               </div>
             </>
@@ -115,13 +125,13 @@ function Login() {
                 <label className="form-label">Token ID</label>
                 <input
                   type="text"
-                  className="form-control bg-dark border-secondary text-white"
+                  className="form-control bg-white border-secondary text-dark"
                   placeholder="Enter your Token ID"
                 />
               </div>
 
               <div className="d-grid">
-                <button type="button" className="btn btn-secondary">
+                <button type="button" className="btn btn-primary">
                   Show Details
                 </button>
               </div>

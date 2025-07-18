@@ -218,7 +218,7 @@ function ManagerDashboard() {
   return (
     <div className="text-light min-vh-100">
       {/* Navbar */}
-      <nav className="navbar navbar-dark bg-primary py-4 shadow">
+      <nav className="navbar navbar-dark py-4 shadow" style={{ backgroundColor: '#1c4fa0ff'}}>
         <div className="container d-flex justify-content-between align-items-center">
           <h2 className="navbar-brand mb-0 d-flex align-items-center fs-3 fw-bold">
             <span className="me-2 fs-2">🎫</span>

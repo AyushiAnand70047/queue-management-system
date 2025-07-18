@@ -38,49 +38,49 @@ function Register() {
     };
 
     return (
-        <div className="container-fluid d-flex justify-content-center align-items-center min-vh-100" style={{ backgroundColor: '#000' }}>
+        <div className="container-fluid d-flex justify-content-center align-items-center min-vh-100" style={{ backgroundColor: '#fff' }}>
             <div
-                className="card text-white p-4 shadow"
+                className="card text-dark p-4 shadow"
                 style={{
                     maxWidth: '400px',
                     width: '100%',
                     borderRadius: '1rem',
-                    backgroundColor: '#0d1117',
+                    backgroundColor: '#f6f9fd',
                 }}
             >
 
                 {/* Title */}
                 <div className="text-center mb-4">
                     <h3 className="fw-bold">Create Account</h3>
-                    <p className="text-light small">Please fill in the details to register</p>
+                    <p className="text-dark small">Please fill in the details to register</p>
                 </div>
 
                 <form onSubmit={handleSubmit}>
                     <div className="mb-3">
-                        <label className="form-label text-light">Full Name</label>
+                        <label className="form-label text-dark">Full Name</label>
                         <input
                             type="text"
-                            className="form-control bg-dark border-secondary text-white"
+                            className="form-control bg-light border-secondary text-dark"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                         />
                     </div>
 
                     <div className="mb-3">
-                        <label className="form-label text-light">Email Address</label>
+                        <label className="form-label text-dark">Email Address</label>
                         <input
                             type="email"
-                            className="form-control bg-dark border-secondary text-white"
+                            className="form-control bg-light border-secondary text-dark"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                         />
                     </div>
 
                     <div className="mb-3">
-                        <label className="form-label text-light">Password</label>
+                        <label className="form-label text-dark">Password</label>
                         <input
                             type="password"
-                            className="form-control bg-dark border-secondary text-white"
+                            className="form-control bg-light border-secondary text-dark"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                         />
@@ -89,7 +89,7 @@ function Register() {
                     <div className="d-grid mb-3">
                         <button
                             type="submit"
-                            className="btn btn-secondary"
+                            className="btn btn-primary fw-semibold"
                             style={{
                                 transition: 'all 0.3s ease',
                                 transform: 'scale(1)',
@@ -107,7 +107,7 @@ function Register() {
                 <hr className="border-secondary my-3" />
 
                 <div className="text-center">
-                    <span className="text-light">Already have an account? </span>
+                    <span className="text-dark">Already have an account? </span>
                     <button type="button" className="btn btn-link text-decoration-none text-info p-0 ms-1" onClick={() => navigate('/')}>
                         Login
                     </button>
