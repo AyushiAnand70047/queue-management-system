@@ -97,11 +97,33 @@ const getQueuesByManager = async (req, res) => {
   }
 };
 
+const getPersonsByManagerAndQueue = async (req, res) => {
+  const { managerId, queueId } = req.params;
+
+  try {
+    // Check if the queue belongs to this manager
+    const queue = await Queue.findOne({ _id: queueId, manager: managerId });
+    if (!queue) {
+      return res.status(404).json({ message: 'Queue not found for this manager' });
+    }
+
+    // Fetch persons in this queue
+    const persons = await Person.find({ queue: queueId })
+      .populate('queue') // optional, gives queue details
+      .sort({ position: 1 }); // sorted by queue position
+
+    res.status(200).json(persons);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch persons', error });
+  }
+};
+
 export {
   registerManager,
   loginManager,
   getManagerById,
   createQueue,
   addPersonToQueue,
-  getQueuesByManager
+  getQueuesByManager,
+  getPersonsByManagerAndQueue
 };

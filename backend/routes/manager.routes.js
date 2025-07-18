@@ -1,5 +1,5 @@
 import express from 'express';
-import { registerManager, loginManager, getManagerById, createQueue, addPersonToQueue, getQueuesByManager } from '../controller/manager.controller.js';
+import { registerManager, loginManager, getManagerById, createQueue, addPersonToQueue, getQueuesByManager, getPersonsByManagerAndQueue } from '../controller/manager.controller.js';
 import { get } from 'mongoose';
 
 const router = express.Router()
@@ -10,5 +10,6 @@ router.get('/:id', getManagerById);
 router.post('/queue', createQueue);
 router.post('/person', addPersonToQueue);
 router.get('/queues/:managerId', getQueuesByManager);
+router.get('/:managerId/queue/:queueId/persons', getPersonsByManagerAndQueue);
 
 export default router;

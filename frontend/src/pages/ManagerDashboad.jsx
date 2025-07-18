@@ -8,6 +8,7 @@ function ManagerDashboard() {
   const [currentQueueId, setCurrentQueueId] = useState(null);
   const [tokenCounter, setTokenCounter] = useState(1);
   const [queueName, setQueueName] = useState('');
+  const [persons, setPersons] = useState([]);
   const [personName, setPersonName] = useState('');
   const [analytics, setAnalytics] = useState({
     totalQueues: 0,
@@ -44,6 +45,7 @@ function ManagerDashboard() {
       } catch (error) {
         console.error('Error fetching manager or queues:', error);
       }
+
     };
 
     if (managerId) fetchManagerAndQueues();
@@ -92,7 +94,41 @@ function ManagerDashboard() {
   };
 
 
-  const selectQueue = (queueId) => setCurrentQueueId(queueId);
+  const selectQueue = async (queueId) => {
+    setCurrentQueueId(queueId);
+
+    try {
+      const response = await axios.get(`${url}/manager/${managerId}/queue/${queueId}/persons`);
+      const fetchedPersons = response.data;
+
+      const tokens = fetchedPersons.map((person, index) => ({
+        id: person._id,
+        name: person.name,
+        addedAt: person.addedAt,
+        position: person.position,
+      }));
+
+      setQueues(prev => ({
+        ...prev,
+        [queueId]: {
+          ...prev[queueId],
+          tokens,
+        },
+      }));
+
+      setPersons(fetchedPersons); // optional if needed elsewhere
+    } catch (error) {
+      console.error('Failed to fetch persons:', error);
+      setQueues(prev => ({
+        ...prev,
+        [queueId]: {
+          ...prev[queueId],
+          tokens: [],
+        },
+      }));
+    }
+  };
+
 
   const addToQueue = async () => {
     if (!personName.trim()) return alert("Please enter a person's name");
