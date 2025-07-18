@@ -17,6 +17,7 @@ const Queue = mongoose.model('Queue', queueSchema);
 const personSchema = new mongoose.Schema({
   name: String,
   queue: { type: mongoose.Schema.Types.ObjectId, ref: 'Queue' },
+  manager: { type: mongoose.Schema.Types.ObjectId, ref: 'Manager' },
   addedAt: { type: Date, default: Date.now },
   position: { type: Number },
   status: { type: String, enum: ['waiting', 'served', 'cancelled'], default: 'waiting' },

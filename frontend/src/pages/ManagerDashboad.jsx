@@ -43,24 +43,28 @@ function ManagerDashboard() {
       return;
     }
 
-    const queueId = 'queue_' + Date.now();
-    const newQueue = {
-      id: queueId,
-      name: queueName,
-      tokens: [],
-      createdAt: new Date(),
-      totalServed: 0,
-    };
-
-    setQueues(prev => ({ ...prev, [queueId]: newQueue }));
-    setAnalytics(prev => ({ ...prev, totalQueues: prev.totalQueues + 1 }));
-
     try {
-      await axios.post(`${url}/manager/queue`, {
+      const response = await axios.post(`${url}/manager/queue`, {
         name: queueName,
         managerId,
       });
-      alert(`Queue "${queueName}" created successfully!`);
+
+      const savedQueue = response.data;
+
+      setQueues(prev => ({
+        ...prev,
+        [savedQueue._id]: {
+          id: savedQueue._id,
+          name: savedQueue.name,
+          tokens: [],
+          createdAt: new Date(savedQueue.createdAt),
+          totalServed: 0,
+        },
+      }));
+
+      setAnalytics(prev => ({ ...prev, totalQueues: prev.totalQueues + 1 }));
+
+      alert(`Queue "${savedQueue.name}" created successfully!`);
     } catch (error) {
       console.error('Error creating queue:', error);
       alert('Failed to create queue. Try again later.');
@@ -68,6 +72,7 @@ function ManagerDashboard() {
 
     setQueueName('');
   };
+
 
   const selectQueue = (queueId) => setCurrentQueueId(queueId);
 

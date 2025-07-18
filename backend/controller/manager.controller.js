@@ -66,10 +66,23 @@ const addPersonToQueue = async (req, res) => {
   const { name, queueId, position } = req.body;
 
   try {
-    const person = new Person({ name, queue: queueId, position });
+    // Step 1: Get queue to access manager
+    const queue = await Queue.findById(queueId).populate('manager');
+    if (!queue) return res.status(404).json({ message: 'Queue not found' });
+
+    // Step 2: Create new person with manager from queue
+    const person = new Person({
+      name,
+      queue: queue._id,
+      manager: queue.manager._id,
+      position,
+    });
+
     await person.save();
+
     res.status(201).json(person);
   } catch (error) {
+    console.error(error);
     res.status(500).json({ message: 'Failed to add person to queue', error });
   }
 };
