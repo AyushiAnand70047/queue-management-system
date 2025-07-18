@@ -4,13 +4,13 @@ import axios from 'axios';
 
 function Register() {
     const navigate = useNavigate();
-    const [name, setName] = React.useState();
-    const [email, setEmail] = React.useState();
-    const [password, setPassword] = React.useState();
+    const [name, setName] = React.useState('');
+    const [email, setEmail] = React.useState('');
+    const [password, setPassword] = React.useState('');
 
     const handleSubmit = (e) => {
         e.preventDefault()
-        axios.post('',{name, email, password})
+        axios.post('http://localhost:5000/register',{name, email, password})
         .then(result => console.log(result))
         .catch(err => console.error(err));
     }
