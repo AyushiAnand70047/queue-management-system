@@ -21,6 +21,6 @@ A full-stack Queue Management web application that allows managers to create and
 | Frontend       | Backend        | Database | Authentication |
 |----------------|----------------|----------|----------------|
 | React.js       | Node.js        | MongoDB  | JWT            |
-| CSS            | Express.js     | Mongoose | Bcrypt         |
+| Bootstrap      | Express.js     | Mongoose | Bcrypt         |
 
 ---
