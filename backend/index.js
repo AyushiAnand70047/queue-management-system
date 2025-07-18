@@ -2,7 +2,7 @@ import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import db from './utils/db.js';
-import ManagerModel from './models/Manager.js';
+import router from './routes/manager.routes.js';
 
 dotenv.config();
 
@@ -14,16 +14,7 @@ app.use(express.json())
 // connect to db
 db();
 
-app.post('/register', async (req, res) => {
-    const { name, email, password } = req.body;
-    try{
-        const managers = new ManagerModel({ name, email, password });
-        await managers.save();
-        res.status(201).json(managers);
-    }catch(err){
-        res.status(500).json({ message: err.message });
-    }
-});
+app.use('/manager', router);
 
 const port = process.env.PORT;
 
