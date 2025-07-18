@@ -224,19 +224,28 @@ function ManagerDashboard() {
     alert(`Served: ${servedToken.name} (Token #${servedToken.id})`);
   };
 
-  const cancelToken = (tokenId) => {
+  const cancelToken = async (tokenId) => {
     const queue = queues[currentQueueId];
     const canceledToken = queue.tokens.find(t => t.id === tokenId);
     const newTokens = queue.tokens.filter(t => t.id !== tokenId);
     newTokens.forEach((token, idx) => (token.position = idx + 1));
 
+    // Update UI immediately
     setQueues(prev => ({
       ...prev,
       [currentQueueId]: { ...queue, tokens: newTokens },
     }));
 
+    // Call backend to delete
+    try {
+      await axios.delete(`${url}/manager/person/${tokenId}`);
+    } catch (error) {
+      console.error('Failed to delete person from DB:', error);
+    }
+
     alert(`Cancelled token for: ${canceledToken.name}`);
   };
+
 
   const getWaitTime = (addedAt) =>
     Math.round((new Date() - new Date(addedAt)) / (1000 * 60));

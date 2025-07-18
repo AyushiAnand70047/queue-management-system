@@ -118,6 +118,20 @@ const getPersonsByManagerAndQueue = async (req, res) => {
   }
 };
 
+const deletePersonById = async (req, res) => {
+  try {
+    const { personId } = req.params;
+    const deleted = await Person.findByIdAndDelete(personId);
+    if (!deleted) {
+      return res.status(404).json({ message: 'Person not found' });
+    }
+    res.status(200).json({ message: 'Person deleted successfully' });
+  } catch (error) {
+    console.error('Delete person error:', error);
+    res.status(500).json({ message: 'Failed to delete person', error });
+  }
+};
+
 export {
   registerManager,
   loginManager,
@@ -125,5 +139,6 @@ export {
   createQueue,
   addPersonToQueue,
   getQueuesByManager,
-  getPersonsByManagerAndQueue
+  getPersonsByManagerAndQueue,
+  deletePersonById
 };
