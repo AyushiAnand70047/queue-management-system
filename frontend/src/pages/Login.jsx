@@ -1,9 +1,29 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
 function Login() {
   const [activeTab, setActiveTab] = useState('manager');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const navigate = useNavigate();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const url = import.meta.env.VITE_BACKEND_URL;
+
+    try {
+      const response = await axios.post(`${url}/manager/login`, {
+        email,
+        password
+      });
+      console.log(response.data);
+      navigate('/manager/dashboard');
+    } catch (error) {
+      const message = error?.response?.data?.message || "Login failed";
+      alert(message);
+    }
+  };
 
   return (
     <div className="container-fluid d-flex justify-content-center align-items-center min-vh-100" style={{ backgroundColor: '#000' }}>
@@ -41,7 +61,7 @@ function Login() {
         </div>
 
         {/* Form */}
-        <form>
+        <form onSubmit={handleSubmit}>
           {activeTab === 'manager' ? (
             <>
               <div className="mb-3">
@@ -49,7 +69,8 @@ function Login() {
                 <input
                   type="email"
                   className="form-control bg-dark border-secondary text-white"
-                  style={{ '::placeholder': { color: '#bbb' } }}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                 />
               </div>
 
@@ -58,11 +79,21 @@ function Login() {
                 <input
                   type="password"
                   className="form-control bg-dark border-secondary text-white"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                 />
               </div>
 
               <div className="d-grid mb-3">
-                <button type="submit" className="btn btn-secondary">
+                <button
+                  type="submit"
+                  className="btn btn-secondary"
+                  style={{
+                    transition: 'all 0.3s ease',
+                  }}
+                  onMouseOver={(e) => e.target.style.backgroundColor = '#5c636a'}
+                  onMouseOut={(e) => e.target.style.backgroundColor = ''}
+                >
                   Sign in
                 </button>
               </div>

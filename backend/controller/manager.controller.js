@@ -5,11 +5,6 @@ const registerManager = async (req, res) => {
     // get manager details from request body
     const { name, email, password } = req.body;
 
-    // validate
-    if(!name || !email || !password) {
-        return res.status(400).json({ message: 'All fields are required' });
-    }
-
     // check if manager already exists
     try {
         const existingManager = await Manager.findOne({ email });
@@ -25,7 +20,7 @@ const registerManager = async (req, res) => {
             password: hashedPassword
         });
 
-        if(!manager) {
+        if (!manager) {
             return res.status(500).json({ message: 'Failed to create manager' });
         }
 
@@ -37,4 +32,33 @@ const registerManager = async (req, res) => {
     }
 }
 
-export {registerManager};
+const loginManager = async (req, res) => {
+    const { email, password } = req.body;
+
+    if(!email || !password) {
+        return res.status(400).json({ message: 'Email and password are required' });
+    }
+
+    try {
+        const manager = await Manager.findOne({ email });
+        if (!manager) {
+            return res.status(400).json({ message: 'Invalid email' });
+        }
+
+        const isPasswordValid = await bcrypt.compare(password, manager.password);
+
+        if (!isPasswordValid) {
+            return res.status(400).json({ message: 'Invalid password' });
+        }
+
+        res.status(200).json({
+            message: 'Login successful', managerId: manager._id
+        });
+    } catch (error) {
+        res.status(400).json({
+            error
+        });
+    }
+}
+
+export { registerManager, loginManager };
