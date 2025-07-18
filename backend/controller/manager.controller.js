@@ -61,4 +61,10 @@ const loginManager = async (req, res) => {
     }
 }
 
-export { registerManager, loginManager };
+const getManagerById = async (req, res) => {
+  const manager = await Manager.findById(req.params.id);
+  if (!manager) return res.status(404).send({ message: 'Manager not found' });
+  res.send(manager);
+}
+
+export { registerManager, loginManager, getManagerById };

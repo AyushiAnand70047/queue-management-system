@@ -1,0 +1,451 @@
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
+
+function ManagerDashboard() {
+  const managerId = localStorage.getItem('managerId');
+  const [managerName, setManagerName] = useState('');
+
+  useEffect(() => {
+    const fetchManager = async () => {
+      try {
+        const url = import.meta.env.VITE_BACKEND_URL;
+        const response = await axios.get(`${url}/manager/${managerId}`);
+        setManagerName(response.data.name);
+        localStorage.setItem('managerName', response.data.name);
+      } catch (error) {
+        console.error('Error fetching manager details:', error);
+      }
+    };
+
+    if (managerId) {
+      fetchManager();
+    }
+  }, [managerId]);
+
+  const handleLogout = () => {
+    localStorage.clear();
+    window.location.href = '/';
+  };
+
+  const [queues, setQueues] = useState({});
+  const [currentQueueId, setCurrentQueueId] = useState(null);
+  const [tokenCounter, setTokenCounter] = useState(1);
+  const [queueName, setQueueName] = useState('');
+  const [personName, setPersonName] = useState('');
+  const [analytics, setAnalytics] = useState({
+    totalQueues: 0,
+    totalTokensServed: 0,
+    totalWaitTime: 0,
+    servedTokens: 0
+  });
+
+  // Create a new queue
+  const createQueue = () => {
+    if (!queueName.trim()) {
+      alert('Please enter a queue name');
+      return;
+    }
+
+    const queueId = 'queue_' + Date.now();
+    const newQueue = {
+      id: queueId,
+      name: queueName,
+      tokens: [],
+      createdAt: new Date(),
+      totalServed: 0
+    };
+
+    setQueues(prev => ({ ...prev, [queueId]: newQueue }));
+    setAnalytics(prev => ({ ...prev, totalQueues: prev.totalQueues + 1 }));
+    setQueueName('');
+    alert(`Queue "${queueName}" created successfully!`);
+  };
+
+  // Select active queue
+  const selectQueue = (queueId) => {
+    setCurrentQueueId(queueId);
+  };
+
+  // Add person to queue
+  const addToQueue = () => {
+    if (!personName.trim()) {
+      alert('Please enter a person\'s name');
+      return;
+    }
+
+    if (!currentQueueId) {
+      alert('Please select a queue first');
+      return;
+    }
+
+    const token = {
+      id: tokenCounter,
+      name: personName,
+      addedAt: new Date(),
+      position: queues[currentQueueId].tokens.length + 1
+    };
+
+    setQueues(prev => ({
+      ...prev,
+      [currentQueueId]: {
+        ...prev[currentQueueId],
+        tokens: [...prev[currentQueueId].tokens, token]
+      }
+    }));
+
+    setTokenCounter(prev => prev + 1);
+    setPersonName('');
+  };
+
+  // Move token up in queue
+  const moveUp = (tokenId) => {
+    const queue = queues[currentQueueId];
+    const index = queue.tokens.findIndex(t => t.id === tokenId);
+
+    if (index > 0) {
+      const newTokens = [...queue.tokens];
+      [newTokens[index], newTokens[index - 1]] = [newTokens[index - 1], newTokens[index]];
+
+      // Update positions
+      newTokens.forEach((token, idx) => {
+        token.position = idx + 1;
+      });
+
+      setQueues(prev => ({
+        ...prev,
+        [currentQueueId]: {
+          ...prev[currentQueueId],
+          tokens: newTokens
+        }
+      }));
+    }
+  };
+
+  // Move token down in queue
+  const moveDown = (tokenId) => {
+    const queue = queues[currentQueueId];
+    const index = queue.tokens.findIndex(t => t.id === tokenId);
+
+    if (index < queue.tokens.length - 1) {
+      const newTokens = [...queue.tokens];
+      [newTokens[index], newTokens[index + 1]] = [newTokens[index + 1], newTokens[index]];
+
+      // Update positions
+      newTokens.forEach((token, idx) => {
+        token.position = idx + 1;
+      });
+
+      setQueues(prev => ({
+        ...prev,
+        [currentQueueId]: {
+          ...prev[currentQueueId],
+          tokens: newTokens
+        }
+      }));
+    }
+  };
+
+  // Serve next person in queue
+  const serveNext = () => {
+    if (!currentQueueId || queues[currentQueueId].tokens.length === 0) {
+      alert('No tokens in queue to serve');
+      return;
+    }
+
+    const queue = queues[currentQueueId];
+    const servedToken = queue.tokens[0];
+    const waitTime = (new Date() - servedToken.addedAt) / (1000 * 60); // in minutes
+
+    // Remove first token and update positions
+    const newTokens = queue.tokens.slice(1);
+    newTokens.forEach((token, idx) => {
+      token.position = idx + 1;
+    });
+
+    setQueues(prev => ({
+      ...prev,
+      [currentQueueId]: {
+        ...prev[currentQueueId],
+        tokens: newTokens,
+        totalServed: prev[currentQueueId].totalServed + 1
+      }
+    }));
+
+    setAnalytics(prev => ({
+      ...prev,
+      totalTokensServed: prev.totalTokensServed + 1,
+      totalWaitTime: prev.totalWaitTime + waitTime,
+      servedTokens: prev.servedTokens + 1
+    }));
+
+    alert(`Served: ${servedToken.name} (Token #${servedToken.id})`);
+  };
+
+  // Cancel a token
+  const cancelToken = (tokenId) => {
+    const queue = queues[currentQueueId];
+    const canceledToken = queue.tokens.find(t => t.id === tokenId);
+    const newTokens = queue.tokens.filter(t => t.id !== tokenId);
+
+    // Update positions
+    newTokens.forEach((token, idx) => {
+      token.position = idx + 1;
+    });
+
+    setQueues(prev => ({
+      ...prev,
+      [currentQueueId]: {
+        ...prev[currentQueueId],
+        tokens: newTokens
+      }
+    }));
+
+    alert(`Cancelled token for: ${canceledToken.name}`);
+  };
+
+  // Calculate wait time for a token
+  const getWaitTime = (addedAt) => {
+    return Math.round((new Date() - addedAt) / (1000 * 60));
+  };
+
+  // Get current queue
+  const currentQueue = currentQueueId ? queues[currentQueueId] : null;
+  const currentQueueLength = currentQueue ? currentQueue.tokens.length : 0;
+  const avgWaitTime = analytics.servedTokens > 0 ?
+    Math.round(analytics.totalWaitTime / analytics.servedTokens) : 0;
+
+
+  return (
+    <div className="text-light min-vh-100">
+      {/* Navbar */}
+      <nav className="navbar navbar-dark bg-primary py-4 shadow">
+        <div className="container d-flex justify-content-between align-items-center">
+          <h2 className="navbar-brand mb-0 d-flex align-items-center fs-3 fw-bold">
+            <span className="me-2 fs-2">🎫</span>
+            Queue Management System
+          </h2>
+          <div className="d-flex align-items-center">
+            <p className="mb-0 me-4 fs-5">
+              Welcome, <strong>{managerName || 'Manager'}</strong>
+            </p>
+            <button
+              onClick={handleLogout}
+              className="btn btn-danger fw-semibold px-4 py-2"
+            >
+              Logout
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      {/* Dashboard Content */}
+      <div className="container-fluid py-4">
+
+      {/* Main Content */}
+      <div className="row mb-4">
+        {/* Queue Management */}
+        <div className="col-lg-6 mb-4">
+          <div className="card shadow-lg h-100" style={{ background: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(10px)' }}>
+            <div className="card-body">
+              <h3 className="card-title text-primary border-bottom pb-2">Queue Management</h3>
+              
+              {/* Create Queue */}
+              <div className="mb-4">
+                <label className="form-label fw-bold">Create New Queue:</label>
+                <div className="input-group">
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Enter queue name"
+                    value={queueName}
+                    onChange={(e) => setQueueName(e.target.value)}
+                  />
+                  <button className="btn btn-primary" onClick={createQueue}>
+                    Create Queue
+                  </button>
+                </div>
+              </div>
+
+              {/* Select Queue */}
+              <div className="mb-4">
+                <label className="form-label fw-bold">Select Active Queue:</label>
+                <select
+                  className="form-select"
+                  value={currentQueueId || ''}
+                  onChange={(e) => selectQueue(e.target.value)}
+                >
+                  <option value="">Select a queue</option>
+                  {Object.entries(queues).map(([id, queue]) => (
+                    <option key={id} value={id}>{queue.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Queue Controls */}
+              {currentQueueId && (
+                <>
+                  <div className="alert alert-info text-center mb-3">
+                    <strong>Managing: {currentQueue.name}</strong>
+                  </div>
+
+                  <div className="mb-3">
+                    <label className="form-label fw-bold">Add Person to Queue:</label>
+                    <div className="input-group">
+                      <input
+                        type="text"
+                        className="form-control"
+                        placeholder="Enter person's name"
+                        value={personName}
+                        onChange={(e) => setPersonName(e.target.value)}
+                      />
+                      <button className="btn btn-success" onClick={addToQueue}>
+                        Add to Queue
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="d-grid">
+                    <button className="btn btn-primary btn-lg" onClick={serveNext}>
+                      Serve Next Person
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Queue Display */}
+        <div className="col-lg-6 mb-4">
+          <div className="card shadow-lg h-100" style={{ background: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(10px)' }}>
+            <div className="card-body">
+              <h3 className="card-title text-primary border-bottom pb-2">Current Queue</h3>
+              
+              {!currentQueueId ? (
+                <div className="text-center text-muted py-5">
+                  <em>No active queue selected</em>
+                </div>
+              ) : currentQueue.tokens.length === 0 ? (
+                <div className="text-center text-muted py-5">
+                  <em>Queue is empty</em>
+                </div>
+              ) : (
+                <div className="queue-list">
+                  {currentQueue.tokens.map((token, index) => (
+                    <div
+                      key={token.id}
+                      className={`card mb-2 ${index === 0 ? 'border-danger bg-light' : ''}`}
+                    >
+                      <div className="card-body py-2">
+                        <div className="row align-items-center">
+                          <div className="col-auto">
+                            <span className="badge bg-primary rounded-pill fs-6">
+                              {token.position}
+                            </span>
+                          </div>
+                          <div className="col">
+                            <div className="fw-bold">{token.name}</div>
+                            <small className="text-muted">
+                              Waiting: {getWaitTime(token.addedAt)} min
+                            </small>
+                          </div>
+                          <div className="col-auto">
+                            <div className="btn-group btn-group-sm">
+                              {index > 0 && (
+                                <button
+                                  className="btn btn-warning"
+                                  onClick={() => moveUp(token.id)}
+                                >
+                                  ↑
+                                </button>
+                              )}
+                              {index < currentQueue.tokens.length - 1 && (
+                                <button
+                                  className="btn btn-warning"
+                                  onClick={() => moveDown(token.id)}
+                                >
+                                  ↓
+                                </button>
+                              )}
+                              <button
+                                className="btn btn-danger"
+                                onClick={() => cancelToken(token.id)}
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Analytics Dashboard */}
+      <div className="row">
+        <div className="col-12">
+          <div className="card shadow-lg" style={{ background: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(10px)' }}>
+            <div className="card-body">
+              <h3 className="card-title text-primary border-bottom pb-2">Analytics Dashboard</h3>
+              
+              {/* Stats Cards */}
+              <div className="row mb-4">
+                <div className="col-md-3 mb-3">
+                  <div className="card bg-light shadow-sm">
+                    <div className="card-body text-center">
+                      <div className="display-6 fw-bold text-primary">{analytics.totalQueues}</div>
+                      <div className="text-muted small">Total Queues</div>
+                    </div>
+                  </div>
+                </div>
+                <div className="col-md-3 mb-3">
+                  <div className="card bg-light shadow-sm">
+                    <div className="card-body text-center">
+                      <div className="display-6 fw-bold text-success">{analytics.totalTokensServed}</div>
+                      <div className="text-muted small">Total Tokens Served</div>
+                    </div>
+                  </div>
+                </div>
+                <div className="col-md-3 mb-3">
+                  <div className="card bg-light shadow-sm">
+                    <div className="card-body text-center">
+                      <div className="display-6 fw-bold text-warning">{avgWaitTime}</div>
+                      <div className="text-muted small">Avg Wait Time (min)</div>
+                    </div>
+                  </div>
+                </div>
+                <div className="col-md-3 mb-3">
+                  <div className="card bg-light shadow-sm">
+                    <div className="card-body text-center">
+                      <div className="display-6 fw-bold text-info">{currentQueueLength}</div>
+                      <div className="text-muted small">Current Queue Length</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Chart Placeholder */}
+              <div className="card bg-white shadow-sm">
+                <div className="card-body">
+                  <h5 className="card-title">Queue Activity Timeline</h5>
+                  <div className="bg-light rounded p-4 text-center text-muted">
+                    <em>Chart visualization would be implemented here with a charting library like Chart.js or Recharts</em>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    </div>
+  );
+}
+
+export default ManagerDashboard;

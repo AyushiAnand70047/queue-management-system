@@ -18,6 +18,8 @@ function Login() {
         password
       });
       console.log(response.data);
+      localStorage.setItem('managerId', response.data.managerId);
+      alert("Login Successful!");
       navigate('/manager/dashboard');
     } catch (error) {
       const message = error?.response?.data?.message || "Login failed";
