@@ -1,8 +1,19 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
 function Register() {
     const navigate = useNavigate();
+    const [name, setName] = React.useState();
+    const [email, setEmail] = React.useState();
+    const [password, setPassword] = React.useState();
+
+    const handleSubmit = (e) => {
+        e.preventDefault()
+        axios.post('',{name, email, password})
+        .then(result => console.log(result))
+        .catch(err => console.error(err));
+    }
 
     return (
         <div className="container-fluid d-flex justify-content-center align-items-center min-vh-100" style={{ backgroundColor: '#000' }}>
@@ -22,35 +33,43 @@ function Register() {
                     <p className="text-light small">Please fill in the details to register</p>
                 </div>
 
-                <div className="mb-3">
-                    <label className="form-label text-light">Full Name</label>
-                    <input
-                        type="text"
-                        className="form-control bg-dark border-secondary text-white"
-                    />
-                </div>
+                <form onSubmit={handleSubmit}>
+                    <div className="mb-3">
+                        <label className="form-label text-light">Full Name</label>
+                        <input
+                            type="text"
+                            className="form-control bg-dark border-secondary text-white"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                        />
+                    </div>
 
-                <div className="mb-3">
-                    <label className="form-label text-light">Email Address</label>
-                    <input
-                        type="email"
-                        className="form-control bg-dark border-secondary text-white"
-                    />
-                </div>
+                    <div className="mb-3">
+                        <label className="form-label text-light">Email Address</label>
+                        <input
+                            type="email"
+                            className="form-control bg-dark border-secondary text-white"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                        />
+                    </div>
 
-                <div className="mb-3">
-                    <label className="form-label text-light">Password</label>
-                    <input
-                        type="password"
-                        className="form-control bg-dark border-secondary text-white"
-                    />
-                </div>
+                    <div className="mb-3">
+                        <label className="form-label text-light">Password</label>
+                        <input
+                            type="password"
+                            className="form-control bg-dark border-secondary text-white"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                        />
+                    </div>
 
-                <div className="d-grid mb-3">
-                    <button type="submit" className="btn btn-secondary">
-                        Register
-                    </button>
-                </div>
+                    <div className="d-grid mb-3">
+                        <button type="submit" className="btn btn-secondary">
+                            Register
+                        </button>
+                    </div>
+                </form>
 
                 <hr className="border-secondary my-3" />
 
