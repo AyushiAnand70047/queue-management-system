@@ -1,6 +1,7 @@
-import {Manager, Queue, Person} from '../models/manager.model.js';
+import { Manager, Queue, Person } from '../models/manager.model.js';
 import bcrypt from 'bcrypt';
 
+// Register a new manager
 const registerManager = async (req, res) => {
   const { name, email, password } = req.body;
 
@@ -20,6 +21,7 @@ const registerManager = async (req, res) => {
   }
 };
 
+// Manager login
 const loginManager = async (req, res) => {
   const { email, password } = req.body;
 
@@ -44,12 +46,14 @@ const loginManager = async (req, res) => {
   }
 };
 
+// Get manager details by ID
 const getManagerById = async (req, res) => {
   const manager = await Manager.findById(req.params.id);
   if (!manager) return res.status(404).send({ message: 'Manager not found' });
   res.send(manager);
 };
 
+// Create a new queue for a manager
 const createQueue = async (req, res) => {
   const { name, managerId } = req.body;
 
@@ -62,15 +66,14 @@ const createQueue = async (req, res) => {
   }
 };
 
+// Add a person or token to the queue
 const addPersonToQueue = async (req, res) => {
   const { name, queueId, position } = req.body;
 
   try {
-    // Step 1: Get queue to access manager
     const queue = await Queue.findById(queueId).populate('manager');
     if (!queue) return res.status(404).json({ message: 'Queue not found' });
 
-    // Step 2: Create new person with manager from queue
     const person = new Person({
       name,
       queue: queue._id,
@@ -79,7 +82,6 @@ const addPersonToQueue = async (req, res) => {
     });
 
     await person.save();
-
     res.status(201).json(person);
   } catch (error) {
     console.error(error);
@@ -87,6 +89,7 @@ const addPersonToQueue = async (req, res) => {
   }
 };
 
+// Get all queues created by a manager
 const getQueuesByManager = async (req, res) => {
   const { managerId } = req.params;
   try {
@@ -97,20 +100,19 @@ const getQueuesByManager = async (req, res) => {
   }
 };
 
+// Get all persons or tokens in a specific queue for a manager
 const getPersonsByManagerAndQueue = async (req, res) => {
   const { managerId, queueId } = req.params;
 
   try {
-    // Check if the queue belongs to this manager
     const queue = await Queue.findOne({ _id: queueId, manager: managerId });
     if (!queue) {
       return res.status(404).json({ message: 'Queue not found for this manager' });
     }
 
-    // Fetch persons in this queue
     const persons = await Person.find({ queue: queueId })
-      .populate('queue') // optional, gives queue details
-      .sort({ position: 1 }); // sorted by queue position
+      .populate('queue')
+      .sort({ position: 1 });
 
     res.status(200).json(persons);
   } catch (error) {
@@ -118,6 +120,7 @@ const getPersonsByManagerAndQueue = async (req, res) => {
   }
 };
 
+// Delete a person or token by ID
 const deletePersonById = async (req, res) => {
   try {
     const { personId } = req.params;

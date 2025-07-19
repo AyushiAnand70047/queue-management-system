@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 function ManagerDashboard() {
   const managerId = localStorage.getItem('managerId');
@@ -19,6 +20,8 @@ function ManagerDashboard() {
     totalWaitTime: 0,
     servedTokens: 0,
   });
+  const [selectedQueueId, setSelectedQueueId] = useState(null);
+  const [chartData, setChartData] = useState([]);
 
   const url = import.meta.env.VITE_BACKEND_URL;
 
@@ -85,7 +88,7 @@ function ManagerDashboard() {
     setDraggedItem(tokenId);
     setDraggedIndex(index);
     e.dataTransfer.effectAllowed = 'move';
-    
+
     // Add some visual feedback
     e.target.style.opacity = '0.5';
     e.target.style.transform = 'rotate(2deg)';
@@ -95,7 +98,7 @@ function ManagerDashboard() {
     // Reset visual effects
     e.target.style.opacity = '1';
     e.target.style.transform = 'rotate(0deg)';
-    
+
     // Clean up state
     setDraggedItem(null);
     setDraggedIndex(null);
@@ -129,10 +132,10 @@ function ManagerDashboard() {
 
     const queue = queues[currentQueueId];
     const newTokens = [...queue.tokens];
-    
+
     // Remove the dragged item
     const [draggedToken] = newTokens.splice(draggedIndex, 1);
-    
+
     // Insert at the new position
     newTokens.splice(dropIndex, 0, draggedToken);
 
@@ -153,19 +156,19 @@ function ManagerDashboard() {
   // Helper function to get visual classes for drag state
   const getDragClasses = (index) => {
     let classes = 'card mb-2';
-    
+
     if (index === 0) {
       classes += ' border-danger bg-light';
     }
-    
+
     if (draggedIndex === index) {
       classes += ' border-primary border-3'; // Highlight the dragged item
     }
-    
+
     if (dragOverIndex === index && draggedIndex !== index) {
       classes += ' border-success border-3 bg-success bg-opacity-10'; // Show drop target
     }
-    
+
     return classes;
   };
 
@@ -208,6 +211,7 @@ function ManagerDashboard() {
 
   const selectQueue = async (queueId) => {
     setCurrentQueueId(queueId);
+    setSelectedQueueId(queueId);
 
     try {
       const response = await axios.get(`${url}/manager/${managerId}/queue/${queueId}/persons`);
@@ -273,36 +277,6 @@ function ManagerDashboard() {
     } catch (error) {
       console.error('Error adding person to queue:', error);
     }
-  };
-
-  const moveUp = (tokenId) => {
-    const queue = queues[currentQueueId];
-    const index = queue.tokens.findIndex(t => t.id === tokenId);
-    if (index <= 0) return;
-
-    const newTokens = [...queue.tokens];
-    [newTokens[index], newTokens[index - 1]] = [newTokens[index - 1], newTokens[index]];
-    newTokens.forEach((token, idx) => (token.position = idx + 1));
-
-    setQueues(prev => ({
-      ...prev,
-      [currentQueueId]: { ...queue, tokens: newTokens },
-    }));
-  };
-
-  const moveDown = (tokenId) => {
-    const queue = queues[currentQueueId];
-    const index = queue.tokens.findIndex(t => t.id === tokenId);
-    if (index >= queue.tokens.length - 1) return;
-
-    const newTokens = [...queue.tokens];
-    [newTokens[index], newTokens[index + 1]] = [newTokens[index + 1], newTokens[index]];
-    newTokens.forEach((token, idx) => (token.position = idx + 1));
-
-    setQueues(prev => ({
-      ...prev,
-      [currentQueueId]: { ...queue, tokens: newTokens },
-    }));
   };
 
   const serveNext = async () => {
@@ -374,6 +348,86 @@ function ManagerDashboard() {
   const avgWaitTime = analytics.servedTokens
     ? Math.round(analytics.totalWaitTime / analytics.servedTokens)
     : 0;
+
+  const getAvgWaitTime = () => {
+    if (!currentQueue || currentQueue.tokens.length === 0) return 0;
+    const now = new Date();
+    const totalMinutes = currentQueue.tokens.reduce((sum, token) => {
+      return sum + (now - new Date(token.addedAt)) / 60000;
+    }, 0);
+    return Math.round(totalMinutes / currentQueue.tokens.length);
+  };
+
+  const fetchQueuesWithTokens = async () => {
+    try {
+      const url = import.meta.env.VITE_BACKEND_URL;
+      const res = await axios.get(`${url}/queue/manager/${managerId}`);
+      const queuePromises = res.data.map(async (queue) => {
+        const personsRes = await axios.get(`${url}/queue/${queue._id}/persons`);
+        return { ...queue, tokens: personsRes.data };
+      });
+      const queuesWithTokens = await Promise.all(queuePromises);
+      setQueues(queuesWithTokens);
+    } catch (err) {
+      console.error('Error fetching queues or tokens:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchQueuesWithTokens();
+  }, []);
+
+  const calculateAvgWaitTime = (tokens) => {
+    const waiting = tokens.filter(t => t.status === 'waiting');
+    if (!waiting.length) return 0;
+
+    const now = Date.now();
+    const totalWait = waiting.reduce((acc, t) => acc + (now - new Date(t.addedAt).getTime()), 0);
+    return Math.round((totalWait / waiting.length) / 60000); // in minutes
+  };
+
+  useEffect(() => {
+    if (!currentQueueId) {
+      setChartData([]);
+      return;
+    }
+
+    // Initialize chart data right away when queue changes
+    const initData = [];
+
+    const queue = queues[currentQueueId];
+    if (queue && queue.tokens) {
+      const queueLength = queue.tokens.length;
+      const avgWaitTime = calculateAvgWaitTime(queue.tokens);
+
+      initData.push({
+        time: new Date().toLocaleTimeString(),
+        queueLength,
+        avgWaitTime,
+      });
+    }
+
+    setChartData(initData);
+
+    const interval = setInterval(() => {
+      const queue = queues[currentQueueId];
+      if (!queue || !queue.tokens) return;
+
+      const queueLength = queue.tokens.length;
+      const avgWaitTime = calculateAvgWaitTime(queue.tokens);
+
+      const point = {
+        time: new Date().toLocaleTimeString(),
+        queueLength,
+        avgWaitTime,
+      };
+
+      setChartData(prev => [...prev.slice(-19), point]);
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [currentQueueId, queues]);
+
 
   return (
     <div className="text-light min-vh-100">
@@ -507,7 +561,7 @@ function ManagerDashboard() {
                         onDragEnter={(e) => handleDragEnter(e, index)}
                         onDragLeave={handleDragLeave}
                         onDrop={(e) => handleDrop(e, index)}
-                        style={{ 
+                        style={{
                           cursor: 'move',
                           transition: 'all 0.2s ease',
                           transform: draggedIndex === index ? 'scale(0.98)' : 'scale(1)'
@@ -589,8 +643,9 @@ function ManagerDashboard() {
                   <div className="col-md-3 mb-3">
                     <div className="card bg-light shadow-sm">
                       <div className="card-body text-center">
-                        <div className="display-6 fw-bold text-warning">{avgWaitTime}</div>
+                        <div className="display-6 fw-bold text-warning">{getAvgWaitTime()}</div>
                         <div className="text-muted small">Avg Wait Time (min)</div>
+
                       </div>
                     </div>
                   </div>
@@ -608,8 +663,22 @@ function ManagerDashboard() {
                 <div className="card bg-white shadow-sm">
                   <div className="card-body">
                     <h5 className="card-title">Queue Activity Timeline</h5>
-                    <div className="bg-light rounded p-4 text-center text-muted">
-                      <em>Chart visualization would be implemented here with a charting library like Chart.js or Recharts</em>
+                    <div className="p-4">
+
+                      {currentQueueId && (
+                        <ResponsiveContainer width="100%" height={300}>
+                          <LineChart data={chartData}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="time" />
+                            <YAxis />
+                            <Tooltip />
+                            <Legend />
+                            <Line type="monotone" dataKey="queueLength" stroke="#8884d8" name="Queue Length" />
+                            <Line type="monotone" dataKey="avgWaitTime" stroke="#82ca9d" name="Avg Wait Time (min)" />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      )}
+
                     </div>
                   </div>
                 </div>

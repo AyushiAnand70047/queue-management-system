@@ -9,15 +9,16 @@ dotenv.config();
 const app = express();
 
 app.use(cors());
-app.use(express.json())
+app.use(express.json());
 
-// connect to db
+// Connect to MongoDB
 db();
 
+// Manager routes
 app.use('/manager', router);
 
 const port = process.env.PORT;
 
 app.listen(port, () => {
     console.log(`app listening on port ${port}`);
-})
+});
