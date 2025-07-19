@@ -21,7 +21,7 @@ function Auth() {
         email: loginEmail,
         password: loginPassword,
       });
-      localStorage.setItem('managerId', response.data.managerId);
+      localStorage.setItem('managerId', response.data.managerId); // Save manager ID for session
       alert('Login Successful!');
       navigate('/manager/dashboard');
     } catch (error) {
@@ -30,7 +30,7 @@ function Auth() {
     }
   };
 
-  // Register handler
+  // Registration handler
   const handleRegister = async (e) => {
     e.preventDefault();
     if (!regName.trim() || !regEmail.trim() || !regPassword.trim()) {
@@ -46,7 +46,7 @@ function Auth() {
       if (result.status === 200 || result.status === 201) {
         alert('Registration successful! Please login.');
         setActiveTab('login');
-        // Optionally clear register form fields
+        // Clear registration fields
         setRegName('');
         setRegEmail('');
         setRegPassword('');
@@ -74,7 +74,7 @@ function Auth() {
           backgroundColor: '#f6f9fd',
         }}
       >
-        {/* Tabs */}
+        {/* Toggle tabs for Login or Register */}
         <div className="btn-group w-100 mb-4" role="group">
           <button
             type="button"
@@ -92,7 +92,7 @@ function Auth() {
           </button>
         </div>
 
-        {/* Form */}
+        {/* Login Form */}
         {activeTab === 'login' ? (
           <>
             <div className="text-center mb-4">
@@ -137,6 +137,7 @@ function Auth() {
             </form>
           </>
         ) : (
+          // Registration Form
           <>
             <div className="text-center mb-4">
               <h3 className="fw-bold">Create Account</h3>

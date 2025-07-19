@@ -3,7 +3,10 @@ import axios from 'axios';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 function ManagerDashboard() {
+  // Retrieve logged-in manager's ID from local storage
   const managerId = localStorage.getItem('managerId');
+
+  // state declaration
   const [managerName, setManagerName] = useState('');
   const [queues, setQueues] = useState({});
   const [currentQueueId, setCurrentQueueId] = useState(null);
@@ -23,18 +26,23 @@ function ManagerDashboard() {
   const [selectedQueueId, setSelectedQueueId] = useState(null);
   const [chartData, setChartData] = useState([]);
 
+  // Backend API base URL from environment variable
   const url = import.meta.env.VITE_BACKEND_URL;
 
+  // Fetches manager information and associated queues 
   useEffect(() => {
     const fetchManagerAndQueues = async () => {
       try {
+        // Fetch manager details
         const response = await axios.get(`${url}/manager/${managerId}`);
         setManagerName(response.data.name);
         localStorage.setItem('managerName', response.data.name);
 
+        // Fetch all queues managed by this manager
         const queuesResponse = await axios.get(`${url}/manager/queues/${managerId}`);
         const queuesData = queuesResponse.data;
 
+        // Format queues into an object keyed by queue ID for quick access
         const formattedQueues = {};
         queuesData.forEach(q => {
           formattedQueues[q._id] = {
@@ -57,12 +65,13 @@ function ManagerDashboard() {
     if (managerId) fetchManagerAndQueues();
   }, [managerId, url]);
 
-
+  // Handles user logout Clears all local storage data and redirects to login page
   const handleLogout = () => {
     localStorage.clear();
     window.location.href = '/';
   };
 
+  // Moves a token to the top of the queue list
   const moveToTop = (tokenId) => {
     const queue = queues[currentQueueId];
     const tokenIndex = queue.tokens.findIndex(t => t.id === tokenId);
@@ -74,7 +83,7 @@ function ManagerDashboard() {
     // Insert at position 0 (very top of the queue)
     newTokens.unshift(movedToken);
 
-    // Update positions
+    // Update positions to maintain consistency
     newTokens.forEach((token, idx) => (token.position = idx + 1));
 
     setQueues(prev => ({
@@ -83,33 +92,35 @@ function ManagerDashboard() {
     }));
   };
 
-  // Enhanced drag and drop handlers
+  // Drag-and-drop event handlers to enable reordering tokens
   const handleDragStart = (e, tokenId, index) => {
     setDraggedItem(tokenId);
     setDraggedIndex(index);
     e.dataTransfer.effectAllowed = 'move';
 
-    // Add some visual feedback
+    // Add visual feedback to indicate dragging
     e.target.style.opacity = '0.5';
     e.target.style.transform = 'rotate(2deg)';
   };
 
   const handleDragEnd = (e) => {
-    // Reset visual effects
+    // Reset visual effects on drag end
     e.target.style.opacity = '1';
     e.target.style.transform = 'rotate(0deg)';
 
-    // Clean up state
+    // Clear drag state
     setDraggedItem(null);
     setDraggedIndex(null);
     setDragOverIndex(null);
   };
 
+  // allow drop events on the queue items
   const handleDragOver = (e) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
   };
 
+  // Sets the index of the item currently being dragged over
   const handleDragEnter = (e, index) => {
     e.preventDefault();
     if (draggedIndex !== null && draggedIndex !== index) {
@@ -117,29 +128,30 @@ function ManagerDashboard() {
     }
   };
 
+  // removes the drag over index when leaving the container
   const handleDragLeave = (e) => {
-    // Only clear dragOverIndex if we're actually leaving the container
     if (!e.currentTarget.contains(e.relatedTarget)) {
       setDragOverIndex(null);
     }
   };
 
+  //  Performs the actual queue reordering based on drag and drop
   const handleDrop = (e, dropIndex) => {
     e.preventDefault();
 
     if (draggedItem === null || draggedIndex === null) return;
-    if (draggedIndex === dropIndex) return; // Same position
+    if (draggedIndex === dropIndex) return; // Same position, no change needed
 
     const queue = queues[currentQueueId];
     const newTokens = [...queue.tokens];
 
-    // Remove the dragged item
+    // Remove the dragged item from its original position
     const [draggedToken] = newTokens.splice(draggedIndex, 1);
 
     // Insert at the new position
     newTokens.splice(dropIndex, 0, draggedToken);
 
-    // Update positions
+    // Update all position values to maintain consistency
     newTokens.forEach((token, idx) => (token.position = idx + 1));
 
     setQueues(prev => ({
@@ -147,31 +159,35 @@ function ManagerDashboard() {
       [currentQueueId]: { ...queue, tokens: newTokens },
     }));
 
-    // Clean up
+    // Clean up drag state
     setDraggedItem(null);
     setDraggedIndex(null);
     setDragOverIndex(null);
   };
 
-  // Helper function to get visual classes for drag state
+  // Returns CSS classes based on drag state for visual effects
   const getDragClasses = (index) => {
     let classes = 'card mb-2';
 
+    // Highlight the first item (next to be served)
     if (index === 0) {
       classes += ' border-danger bg-light';
     }
 
+    // Highlight the currently dragged item
     if (draggedIndex === index) {
-      classes += ' border-primary border-3'; // Highlight the dragged item
+      classes += ' border-primary border-3';
     }
 
+    // Highlight the drop target
     if (dragOverIndex === index && draggedIndex !== index) {
-      classes += ' border-success border-3 bg-success bg-opacity-10'; // Show drop target
+      classes += ' border-success border-3 bg-success bg-opacity-10';
     }
 
     return classes;
   };
 
+  // API call to create a new queue
   const createQueue = async () => {
     if (!queueName.trim()) {
       alert('Please enter a queue name');
@@ -186,6 +202,7 @@ function ManagerDashboard() {
 
       const savedQueue = response.data;
 
+      // Add new queue to local state
       setQueues(prev => ({
         ...prev,
         [savedQueue._id]: {
@@ -197,6 +214,7 @@ function ManagerDashboard() {
         },
       }));
 
+      // Update analytics
       setAnalytics(prev => ({ ...prev, totalQueues: prev.totalQueues + 1 }));
 
       alert(`Queue "${savedQueue.name}" created successfully!`);
@@ -208,15 +226,17 @@ function ManagerDashboard() {
     setQueueName('');
   };
 
-
+  // Selects a queue and fetches its persons or tokens from backend
   const selectQueue = async (queueId) => {
     setCurrentQueueId(queueId);
     setSelectedQueueId(queueId);
 
     try {
+      // Fetch all persons currently in the selected queue
       const response = await axios.get(`${url}/manager/${managerId}/queue/${queueId}/persons`);
       const fetchedPersons = response.data;
 
+      // Transform persons data into token format for UI
       const tokens = fetchedPersons.map((person, index) => ({
         id: person._id,
         name: person.name,
@@ -224,6 +244,7 @@ function ManagerDashboard() {
         position: person.position,
       }));
 
+      // Update queue data with fetched tokens
       setQueues(prev => ({
         ...prev,
         [queueId]: {
@@ -232,9 +253,10 @@ function ManagerDashboard() {
         },
       }));
 
-      setPersons(fetchedPersons); // optional if needed elsewhere
+      setPersons(fetchedPersons); // Keep original data if needed elsewhere
     } catch (error) {
       console.error('Failed to fetch persons:', error);
+      // Reset tokens if fetch fails
       setQueues(prev => ({
         ...prev,
         [queueId]: {
@@ -245,11 +267,12 @@ function ManagerDashboard() {
     }
   };
 
-
+  // Adds a new person or token to the current queue
   const addToQueue = async () => {
     if (!personName.trim()) return alert("Please enter a person's name");
     if (!currentQueueId) return alert('Please select a queue first');
 
+    // Create new token object
     const token = {
       id: tokenCounter,
       name: personName,
@@ -257,6 +280,7 @@ function ManagerDashboard() {
       position: queues[currentQueueId].tokens.length + 1,
     };
 
+    // Update queue state with new token
     setQueues(prev => ({
       ...prev,
       [currentQueueId]: {
@@ -265,9 +289,11 @@ function ManagerDashboard() {
       },
     }));
 
+    // Increment token counter for next addition
     setTokenCounter(prev => prev + 1);
     setPersonName('');
 
+    // Persist new token to backend
     try {
       await axios.post(`${url}/manager/person`, {
         name: token.name,
@@ -279,6 +305,7 @@ function ManagerDashboard() {
     }
   };
 
+  // Serves (removes) the first person or token in the queue
   const serveNext = async () => {
     if (!currentQueueId || queues[currentQueueId].tokens.length === 0) {
       return alert('No tokens in queue to serve');
@@ -286,11 +313,13 @@ function ManagerDashboard() {
 
     const queue = queues[currentQueueId];
     const servedToken = queue.tokens[0];
-    const waitTime = (new Date() - new Date(servedToken.addedAt)) / (1000 * 60); // in minutes
+    const waitTime = (new Date() - new Date(servedToken.addedAt)) / (1000 * 60);
 
+    // Remove served token and update positions
     const newTokens = queue.tokens.slice(1);
     newTokens.forEach((token, idx) => (token.position = idx + 1));
 
+    // Update local state
     setQueues(prev => ({
       ...prev,
       [currentQueueId]: {
@@ -300,6 +329,7 @@ function ManagerDashboard() {
       },
     }));
 
+    // Update analytics data
     setAnalytics(prev => ({
       ...prev,
       totalTokensServed: prev.totalTokensServed + 1,
@@ -307,7 +337,7 @@ function ManagerDashboard() {
       servedTokens: prev.servedTokens + 1,
     }));
 
-    // Delete the token from backend
+    // Remove token from backend database
     try {
       await axios.delete(`${url}/manager/person/${servedToken.id}`);
     } catch (error) {
@@ -317,19 +347,22 @@ function ManagerDashboard() {
     alert(`Served: ${servedToken.name} (Token #${servedToken.id})`);
   };
 
+  // Cancels (removes) a specific token from the queue
   const cancelToken = async (tokenId) => {
     const queue = queues[currentQueueId];
     const canceledToken = queue.tokens.find(t => t.id === tokenId);
     const newTokens = queue.tokens.filter(t => t.id !== tokenId);
+
+    // Update positions for remaining tokens
     newTokens.forEach((token, idx) => (token.position = idx + 1));
 
-    // Update UI immediately
+    // Update UI immediately for responsive feedback
     setQueues(prev => ({
       ...prev,
       [currentQueueId]: { ...queue, tokens: newTokens },
     }));
 
-    // Call backend to delete
+    // Remove token from backend database
     try {
       await axios.delete(`${url}/manager/person/${tokenId}`);
     } catch (error) {
@@ -339,16 +372,18 @@ function ManagerDashboard() {
     alert(`Cancelled token for: ${canceledToken.name}`);
   };
 
-
+  // Calculate waiting time (in minutes) since token was added
   const getWaitTime = (addedAt) =>
     Math.round((new Date() - new Date(addedAt)) / (1000 * 60));
 
+  // Computed values for UI display
   const currentQueue = currentQueueId ? queues[currentQueueId] : null;
   const currentQueueLength = currentQueue ? currentQueue.tokens.length : 0;
   const avgWaitTime = analytics.servedTokens
     ? Math.round(analytics.totalWaitTime / analytics.servedTokens)
     : 0;
 
+  // Calculate average wait time for tokens currently waiting in the queue
   const getAvgWaitTime = () => {
     if (!currentQueue || currentQueue.tokens.length === 0) return 0;
     const now = new Date();
@@ -358,14 +393,18 @@ function ManagerDashboard() {
     return Math.round(totalMinutes / currentQueue.tokens.length);
   };
 
+  // Fetch queues along with their tokens from backend
   const fetchQueuesWithTokens = async () => {
     try {
       const url = import.meta.env.VITE_BACKEND_URL;
       const res = await axios.get(`${url}/queue/manager/${managerId}`);
+
+      // Fetch tokens for each queue concurrently
       const queuePromises = res.data.map(async (queue) => {
         const personsRes = await axios.get(`${url}/queue/${queue._id}/persons`);
         return { ...queue, tokens: personsRes.data };
       });
+
       const queuesWithTokens = await Promise.all(queuePromises);
       setQueues(queuesWithTokens);
     } catch (err) {
@@ -373,26 +412,29 @@ function ManagerDashboard() {
     }
   };
 
+  // Load queues with tokens on initial component mount
   useEffect(() => {
     fetchQueuesWithTokens();
   }, []);
 
+  // Calculate average wait time of tokens with status 'waiting'
   const calculateAvgWaitTime = (tokens) => {
     const waiting = tokens.filter(t => t.status === 'waiting');
     if (!waiting.length) return 0;
 
     const now = Date.now();
     const totalWait = waiting.reduce((acc, t) => acc + (now - new Date(t.addedAt).getTime()), 0);
-    return Math.round((totalWait / waiting.length) / 60000); // in minutes
+    return Math.round((totalWait / waiting.length) / 60000);
   };
 
+  // Update chart data periodically to reflect live queue activity
   useEffect(() => {
     if (!currentQueueId) {
       setChartData([]);
       return;
     }
 
-    // Initialize chart data right away when queue changes
+    // Initialize chart data immediately when queue changes
     const initData = [];
 
     const queue = queues[currentQueueId];
@@ -409,6 +451,7 @@ function ManagerDashboard() {
 
     setChartData(initData);
 
+    // Set up interval for real-time chart updates (every 30 seconds)
     const interval = setInterval(() => {
       const queue = queues[currentQueueId];
       if (!queue || !queue.tokens) return;
@@ -422,13 +465,15 @@ function ManagerDashboard() {
         avgWaitTime,
       };
 
+      // Keep only last 20 data points for performance
       setChartData(prev => [...prev.slice(-19), point]);
     }, 30000);
 
+    // Cleanup interval on unmount or queue change
     return () => clearInterval(interval);
   }, [currentQueueId, queues]);
 
-
+  // Render the dashboard UI
   return (
     <div className="text-light min-vh-100">
       {/* Navbar */}
@@ -452,18 +497,18 @@ function ManagerDashboard() {
         </div>
       </nav>
 
-      {/* Dashboard Content */}
+      {/* Main Dashboard Content */}
       <div className="container-fluid py-4">
 
-        {/* Main Content */}
+        {/* Primary Management Interface */}
         <div className="row mb-4">
-          {/* Queue Management */}
+          {/* Queue Management Panel */}
           <div className="col-lg-6 mb-4">
             <div className="card shadow-lg h-100" style={{ background: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(10px)' }}>
               <div className="card-body">
                 <h3 className="card-title text-primary border-bottom pb-2">Queue Management</h3>
 
-                {/* Create Queue */}
+                {/* Queue Creation Section */}
                 <div className="mb-4">
                   <label className="form-label fw-bold">Create New Queue:</label>
                   <div className="input-group">
@@ -480,7 +525,7 @@ function ManagerDashboard() {
                   </div>
                 </div>
 
-                {/* Select Queue */}
+                {/* Queue Selection Section */}
                 <div className="mb-4">
                   <label className="form-label fw-bold">Select Active Queue:</label>
                   <select
@@ -495,13 +540,14 @@ function ManagerDashboard() {
                   </select>
                 </div>
 
-                {/* Queue Controls */}
+                {/* Active Queue Operations */}
                 {currentQueueId && (
                   <>
                     <div className="alert alert-info text-center mb-3">
                       <strong>Managing: {currentQueue.name}</strong>
                     </div>
 
+                    {/* Person Addition Section */}
                     <div className="mb-3">
                       <label className="form-label fw-bold">Add Person to Queue:</label>
                       <div className="input-group">
@@ -518,6 +564,7 @@ function ManagerDashboard() {
                       </div>
                     </div>
 
+                    {/* Service Action Button */}
                     <div className="d-grid">
                       <button className="btn btn-primary btn-lg" onClick={serveNext}>
                         Serve Next Person
@@ -529,12 +576,13 @@ function ManagerDashboard() {
             </div>
           </div>
 
-          {/* Queue Display */}
+          {/* Queue Display Panel */}
           <div className="col-lg-6 mb-4">
             <div className="card shadow-lg h-100" style={{ background: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(10px)' }}>
               <div className="card-body">
                 <h3 className="card-title text-primary border-bottom pb-2">Current Queue</h3>
 
+                {/* Queue Status Display */}
                 {!currentQueueId ? (
                   <div className="text-center text-muted py-5">
                     <em>No active queue selected</em>
@@ -545,11 +593,14 @@ function ManagerDashboard() {
                   </div>
                 ) : (
                   <div className="queue-list">
+                    {/* Drag & Drop Instructions */}
                     <div className="mb-2 p-2 bg-info bg-opacity-10 rounded">
                       <small className="text-info fw-bold">
                         💡 Tip: Drag and drop any item to reorder the queue
                       </small>
                     </div>
+
+                    {/* Queue Token List with Drag & Drop */}
                     {currentQueue.tokens.map((token, index) => (
                       <div
                         key={token.id}
@@ -569,11 +620,14 @@ function ManagerDashboard() {
                       >
                         <div className="card-body py-2">
                           <div className="row align-items-center">
+                            {/* Position Badge */}
                             <div className="col-auto">
                               <span className="badge bg-primary rounded-pill fs-6">
                                 {token.position}
                               </span>
                             </div>
+
+                            {/* Token Information */}
                             <div className="col">
                               <div className="fw-bold">
                                 {draggedIndex === index && (
@@ -585,8 +639,11 @@ function ManagerDashboard() {
                                 Waiting: {getWaitTime(token.addedAt)} min
                               </small>
                             </div>
+
+                            {/* Action Buttons */}
                             <div className="col-auto">
                               <div className="btn-group btn-group-sm">
+                                {/* Priority Button (only show if not first in line) */}
                                 {index > 0 && (
                                   <button
                                     className="btn btn-warning"
@@ -596,6 +653,7 @@ function ManagerDashboard() {
                                     ⬆️ Priority
                                   </button>
                                 )}
+                                {/* Cancel Button */}
                                 <button
                                   className="btn btn-danger"
                                   onClick={() => cancelToken(token.id)}
@@ -615,15 +673,16 @@ function ManagerDashboard() {
           </div>
         </div>
 
-        {/* Analytics Dashboard */}
+        {/* Analytics and Reporting Dashboard */}
         <div className="row">
           <div className="col-12">
             <div className="card shadow-lg" style={{ background: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(10px)' }}>
               <div className="card-body">
                 <h3 className="card-title text-primary border-bottom pb-2">Analytics Dashboard</h3>
 
-                {/* Stats Cards */}
+                {/* Key Performance Indicators */}
                 <div className="row mb-4">
+                  {/* Total Queues Metric */}
                   <div className="col-md-3 mb-3">
                     <div className="card bg-light shadow-sm">
                       <div className="card-body text-center">
@@ -632,6 +691,8 @@ function ManagerDashboard() {
                       </div>
                     </div>
                   </div>
+
+                  {/* Total Served Metric */}
                   <div className="col-md-3 mb-3">
                     <div className="card bg-light shadow-sm">
                       <div className="card-body text-center">
@@ -640,6 +701,8 @@ function ManagerDashboard() {
                       </div>
                     </div>
                   </div>
+
+                  {/* Average Wait Time Metric */}
                   <div className="col-md-3 mb-3">
                     <div className="card bg-light shadow-sm">
                       <div className="card-body text-center">
@@ -649,6 +712,8 @@ function ManagerDashboard() {
                       </div>
                     </div>
                   </div>
+
+                  {/* Current Queue Length Metric */}
                   <div className="col-md-3 mb-3">
                     <div className="card bg-light shadow-sm">
                       <div className="card-body text-center">
@@ -659,12 +724,13 @@ function ManagerDashboard() {
                   </div>
                 </div>
 
-                {/* Chart Placeholder */}
+                {/* Real-time Analytics Chart */}
                 <div className="card bg-white shadow-sm">
                   <div className="card-body">
                     <h5 className="card-title">Queue Activity Timeline</h5>
                     <div className="p-4">
 
+                      {/* Chart Display (only shows when queue is selected) */}
                       {currentQueueId && (
                         <ResponsiveContainer width="100%" height={300}>
                           <LineChart data={chartData}>
