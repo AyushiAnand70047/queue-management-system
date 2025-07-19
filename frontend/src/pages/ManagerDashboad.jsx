@@ -264,7 +264,7 @@ function ManagerDashboard() {
     }));
   };
 
-  const serveNext = () => {
+  const serveNext = async () => {
     if (!currentQueueId || queues[currentQueueId].tokens.length === 0) {
       return alert('No tokens in queue to serve');
     }
@@ -292,8 +292,16 @@ function ManagerDashboard() {
       servedTokens: prev.servedTokens + 1,
     }));
 
+    // Delete the token from backend
+    try {
+      await axios.delete(`${url}/manager/person/${servedToken.id}`);
+    } catch (error) {
+      console.error('Failed to delete served person from DB:', error);
+    }
+
     alert(`Served: ${servedToken.name} (Token #${servedToken.id})`);
   };
+
 
   const cancelToken = async (tokenId) => {
     const queue = queues[currentQueueId];
