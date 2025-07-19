@@ -10,6 +10,8 @@ function ManagerDashboard() {
   const [queueName, setQueueName] = useState('');
   const [persons, setPersons] = useState([]);
   const [personName, setPersonName] = useState('');
+  const [draggedItem, setDraggedItem] = useState(null);
+  const [draggedIndex, setDraggedIndex] = useState(null);
   const [analytics, setAnalytics] = useState({
     totalQueues: 0,
     totalTokensServed: 0,
@@ -55,6 +57,75 @@ function ManagerDashboard() {
   const handleLogout = () => {
     localStorage.clear();
     window.location.href = '/';
+  };
+
+  const moveToTop = (tokenId) => {
+    const queue = queues[currentQueueId];
+    const tokenIndex = queue.tokens.findIndex(t => t.id === tokenId);
+    if (tokenIndex <= 0) return; // Already at top or not found
+
+    const newTokens = [...queue.tokens];
+    const [movedToken] = newTokens.splice(tokenIndex, 1);
+
+    // Insert at position 0 (very top of the queue)
+    newTokens.unshift(movedToken);
+
+    // Update positions
+    newTokens.forEach((token, idx) => (token.position = idx + 1));
+
+    setQueues(prev => ({
+      ...prev,
+      [currentQueueId]: { ...queue, tokens: newTokens },
+    }));
+  };
+
+  // Drag and drop handlers
+  const handleDragStart = (e, tokenId, index) => {
+    if (index === 0) return; // Don't allow dragging the first item
+    setDraggedItem(tokenId);
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+
+    if (!draggedItem) return;
+
+    // Get the drop target
+    const dropTarget = e.target.closest('.card');
+    if (!dropTarget) return;
+
+    const queue = queues[currentQueueId];
+    const draggedTokenIndex = queue.tokens.findIndex(t => t.id === draggedItem);
+
+    // Find the target index based on the card that was dropped on
+    const allCards = Array.from(dropTarget.parentNode.children);
+    const dropIndex = allCards.indexOf(dropTarget);
+
+    if (draggedTokenIndex === dropIndex) return; // Same position
+    if (dropIndex === 0) return; // Don't allow dropping on first position
+
+    const newTokens = [...queue.tokens];
+    const [draggedToken] = newTokens.splice(draggedTokenIndex, 1);
+    newTokens.splice(dropIndex, 0, draggedToken);
+
+    // Update positions
+    newTokens.forEach((token, idx) => (token.position = idx + 1));
+
+    setQueues(prev => ({
+      ...prev,
+      [currentQueueId]: { ...queue, tokens: newTokens },
+    }));
+
+    // Clean up
+    setDraggedItem(null);
+    setDraggedIndex(null);
   };
 
   const createQueue = async () => {
@@ -371,11 +442,18 @@ function ManagerDashboard() {
                     <em>Queue is empty</em>
                   </div>
                 ) : (
-                  <div className="queue-list">
+                  <div
+                    className="queue-list"
+                    onDragOver={handleDragOver}
+                    onDrop={handleDrop}
+                  >
                     {currentQueue.tokens.map((token, index) => (
                       <div
                         key={token.id}
                         className={`card mb-2 ${index === 0 ? 'border-danger bg-light' : ''}`}
+                        draggable={index > 0} // Only allow non-first items to be dragged
+                        onDragStart={(e) => handleDragStart(e, token.id, index)}
+                        style={{ cursor: index > 0 ? 'move' : 'default' }}
                       >
                         <div className="card-body py-2">
                           <div className="row align-items-center">
@@ -395,17 +473,10 @@ function ManagerDashboard() {
                                 {index > 0 && (
                                   <button
                                     className="btn btn-warning"
-                                    onClick={() => moveUp(token.id)}
+                                    onClick={() => moveToTop(token.id)}
+                                    title="Move to top for service"
                                   >
-                                    ↑
-                                  </button>
-                                )}
-                                {index < currentQueue.tokens.length - 1 && (
-                                  <button
-                                    className="btn btn-warning"
-                                    onClick={() => moveDown(token.id)}
-                                  >
-                                    ↓
+                                    ⬆️ Priority
                                   </button>
                                 )}
                                 <button
