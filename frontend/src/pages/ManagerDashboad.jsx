@@ -12,6 +12,7 @@ function ManagerDashboard() {
   const [personName, setPersonName] = useState('');
   const [draggedItem, setDraggedItem] = useState(null);
   const [draggedIndex, setDraggedIndex] = useState(null);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
   const [analytics, setAnalytics] = useState({
     totalQueues: 0,
     totalTokensServed: 0,
@@ -79,12 +80,26 @@ function ManagerDashboard() {
     }));
   };
 
-  // Drag and drop handlers
+  // Enhanced drag and drop handlers
   const handleDragStart = (e, tokenId, index) => {
-    if (index === 0) return; // Don't allow dragging the first item
     setDraggedItem(tokenId);
     setDraggedIndex(index);
     e.dataTransfer.effectAllowed = 'move';
+    
+    // Add some visual feedback
+    e.target.style.opacity = '0.5';
+    e.target.style.transform = 'rotate(2deg)';
+  };
+
+  const handleDragEnd = (e) => {
+    // Reset visual effects
+    e.target.style.opacity = '1';
+    e.target.style.transform = 'rotate(0deg)';
+    
+    // Clean up state
+    setDraggedItem(null);
+    setDraggedIndex(null);
+    setDragOverIndex(null);
   };
 
   const handleDragOver = (e) => {
@@ -92,27 +107,33 @@ function ManagerDashboard() {
     e.dataTransfer.dropEffect = 'move';
   };
 
-  const handleDrop = (e) => {
+  const handleDragEnter = (e, index) => {
+    e.preventDefault();
+    if (draggedIndex !== null && draggedIndex !== index) {
+      setDragOverIndex(index);
+    }
+  };
+
+  const handleDragLeave = (e) => {
+    // Only clear dragOverIndex if we're actually leaving the container
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+      setDragOverIndex(null);
+    }
+  };
+
+  const handleDrop = (e, dropIndex) => {
     e.preventDefault();
 
-    if (!draggedItem) return;
-
-    // Get the drop target
-    const dropTarget = e.target.closest('.card');
-    if (!dropTarget) return;
+    if (draggedItem === null || draggedIndex === null) return;
+    if (draggedIndex === dropIndex) return; // Same position
 
     const queue = queues[currentQueueId];
-    const draggedTokenIndex = queue.tokens.findIndex(t => t.id === draggedItem);
-
-    // Find the target index based on the card that was dropped on
-    const allCards = Array.from(dropTarget.parentNode.children);
-    const dropIndex = allCards.indexOf(dropTarget);
-
-    if (draggedTokenIndex === dropIndex) return; // Same position
-    if (dropIndex === 0) return; // Don't allow dropping on first position
-
     const newTokens = [...queue.tokens];
-    const [draggedToken] = newTokens.splice(draggedTokenIndex, 1);
+    
+    // Remove the dragged item
+    const [draggedToken] = newTokens.splice(draggedIndex, 1);
+    
+    // Insert at the new position
     newTokens.splice(dropIndex, 0, draggedToken);
 
     // Update positions
@@ -126,6 +147,26 @@ function ManagerDashboard() {
     // Clean up
     setDraggedItem(null);
     setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
+  // Helper function to get visual classes for drag state
+  const getDragClasses = (index) => {
+    let classes = 'card mb-2';
+    
+    if (index === 0) {
+      classes += ' border-danger bg-light';
+    }
+    
+    if (draggedIndex === index) {
+      classes += ' border-primary border-3'; // Highlight the dragged item
+    }
+    
+    if (dragOverIndex === index && draggedIndex !== index) {
+      classes += ' border-success border-3 bg-success bg-opacity-10'; // Show drop target
+    }
+    
+    return classes;
   };
 
   const createQueue = async () => {
@@ -302,7 +343,6 @@ function ManagerDashboard() {
     alert(`Served: ${servedToken.name} (Token #${servedToken.id})`);
   };
 
-
   const cancelToken = async (tokenId) => {
     const queue = queues[currentQueueId];
     const canceledToken = queue.tokens.find(t => t.id === tokenId);
@@ -450,18 +490,28 @@ function ManagerDashboard() {
                     <em>Queue is empty</em>
                   </div>
                 ) : (
-                  <div
-                    className="queue-list"
-                    onDragOver={handleDragOver}
-                    onDrop={handleDrop}
-                  >
+                  <div className="queue-list">
+                    <div className="mb-2 p-2 bg-info bg-opacity-10 rounded">
+                      <small className="text-info fw-bold">
+                        💡 Tip: Drag and drop any item to reorder the queue
+                      </small>
+                    </div>
                     {currentQueue.tokens.map((token, index) => (
                       <div
                         key={token.id}
-                        className={`card mb-2 ${index === 0 ? 'border-danger bg-light' : ''}`}
-                        draggable={index > 0} // Only allow non-first items to be dragged
+                        className={getDragClasses(index)}
+                        draggable={true}
                         onDragStart={(e) => handleDragStart(e, token.id, index)}
-                        style={{ cursor: index > 0 ? 'move' : 'default' }}
+                        onDragEnd={handleDragEnd}
+                        onDragOver={handleDragOver}
+                        onDragEnter={(e) => handleDragEnter(e, index)}
+                        onDragLeave={handleDragLeave}
+                        onDrop={(e) => handleDrop(e, index)}
+                        style={{ 
+                          cursor: 'move',
+                          transition: 'all 0.2s ease',
+                          transform: draggedIndex === index ? 'scale(0.98)' : 'scale(1)'
+                        }}
                       >
                         <div className="card-body py-2">
                           <div className="row align-items-center">
@@ -471,7 +521,12 @@ function ManagerDashboard() {
                               </span>
                             </div>
                             <div className="col">
-                              <div className="fw-bold">{token.name}</div>
+                              <div className="fw-bold">
+                                {draggedIndex === index && (
+                                  <span className="badge bg-secondary me-2">Moving...</span>
+                                )}
+                                {token.name}
+                              </div>
                               <small className="text-muted">
                                 Waiting: {getWaitTime(token.addedAt)} min
                               </small>
